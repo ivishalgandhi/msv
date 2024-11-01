@@ -1,0 +1,5 @@
+email,order_id,amount,date
+JOHN@example.com,ORD-001,100.00,2024-01-15
+jane@example.com,ORD-002,200.00,2024-01-16
+BOB@example.com,ORD-003,150.00,2024-01-17
+alice@example.com,ORD-004,300.00,2024-01-18

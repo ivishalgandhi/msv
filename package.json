@@ -1,8 +1,0 @@
-{
-  "name": "msv",
-  "version": "1.0.0",
-  "private": false,
-  "scripts": {
-    "test": "python -m unittest discover tests"
-  }
-}

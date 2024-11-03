@@ -3,7 +3,6 @@
 A powerful CLI tool for merging and transforming CSV/XLSX files with natural language support.
 
 ## Features
-
 - Merge data from CSV and Excel files
 - Case-sensitive or case-insensitive matching
 - Multiple join types (left, right, outer, inner)
@@ -12,7 +11,6 @@ A powerful CLI tool for merging and transforming CSV/XLSX files with natural lan
 - Column mapping with custom names
 
 ## Installation
-
 ```bash
 pip install msv
 ```

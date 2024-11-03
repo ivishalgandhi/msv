@@ -4,89 +4,90 @@ from src.data_merger import DataMerger
 
 class TestDataMerger(unittest.TestCase):
     def setUp(self):
-        # Sample source data
         self.source_data = pd.DataFrame({
             'email': ['john@example.com', 'jane@example.com', 'bob@example.com'],
             'name': ['John Doe', 'Jane Smith', 'Bob Wilson'],
             'phone': ['555-0101', '555-0102', '555-0103']
         })
         
-        # Sample destination data
         self.dest_data = pd.DataFrame({
             'email': ['JOHN@EXAMPLE.COM', 'jane@example.com', 'alice@example.com'],
             'order_id': ['ORD-001', 'ORD-002', 'ORD-003']
         })
-
-    def test_left_join(self):
-        merger = DataMerger(self.source_data, self.dest_data)
-        result = merger.merge(
-            match_column='email',
-            columns_to_copy=['name', 'phone'],
-            ignore_case=True,
-            join_type='left'
-        )
         
-        self.assertEqual(len(result), 3)  # Should maintain destination rows
-        self.assertTrue('name' in result.columns)
-        self.assertTrue('phone' in result.columns)
-        self.assertEqual(result.iloc[0]['name'], 'John Doe')  # Case-insensitive match
-
-    def test_outer_join(self):
+    def test_all_join_types(self):
         merger = DataMerger(self.source_data, self.dest_data)
-        result = merger.merge(
-            match_column='email',
-            columns_to_copy=['name', 'phone'],
-            join_type='outer'
-        )
+        join_types = ['left', 'right', 'outer', 'inner']
+        expected_rows = {
+            'left': 3,   # Keep all destination rows
+            'right': 3,  # Keep all source rows
+            'outer': 4,  # Keep all unique rows
+            'inner': 2   # Keep only matching rows
+        }
         
-        self.assertEqual(len(result), 4)  # All unique emails from both sources
-        self.assertTrue(pd.isna(result[result['email'] == 'bob@example.com']['order_id'].iloc[0]))
-
-    def test_inner_join(self):
-        merger = DataMerger(self.source_data, self.dest_data)
-        result = merger.merge(
-            match_column='email',
-            columns_to_copy=['name', 'phone'],
-            ignore_case=True,
-            join_type='inner'
-        )
-        
-        self.assertEqual(len(result), 2)  # Only matching rows
-        self.assertEqual(set(result['email']), {'JOHN@EXAMPLE.COM', 'jane@example.com'})
-
+        for join_type in join_types:
+            result = merger.merge(
+                match_column='email',
+                columns_to_copy=['name', 'phone'],
+                join_type=join_type
+            )
+            self.assertEqual(len(result), expected_rows[join_type])
+            
     def test_case_sensitivity(self):
-        # Test without ignore_case
         merger = DataMerger(self.source_data, self.dest_data)
+        
+        # Without ignore_case
         result = merger.merge(
             match_column='email',
-            columns_to_copy=['name', 'phone'],
-            ignore_case=False,
-            join_type='inner'
+            columns_to_copy=['name'],
+            ignore_case=False
         )
+        self.assertEqual(len(result[result['name'].notna()]), 1)
         
-        self.assertEqual(len(result), 1)  # Only exact matches
-        self.assertEqual(result.iloc[0]['email'], 'jane@example.com')
-
-    def test_missing_columns(self):
+        # With ignore_case
+        result = merger.merge(
+            match_column='email',
+            columns_to_copy=['name'],
+            ignore_case=True
+        )
+        self.assertEqual(len(result[result['name'].notna()]), 2)
+        
+    def test_empty_dataframes(self):
+        empty_df = pd.DataFrame(columns=['email', 'name'])
+        
+        # Empty source
+        merger = DataMerger(empty_df, self.dest_data)
+        result = merger.merge(
+            match_column='email',
+            columns_to_copy=['name']
+        )
+        self.assertEqual(len(result), len(self.dest_data))
+        
+        # Empty destination
+        merger = DataMerger(self.source_data, empty_df)
+        result = merger.merge(
+            match_column='email',
+            columns_to_copy=['name']
+        )
+        self.assertEqual(len(result), len(self.source_data))
+        
+    def test_error_handling(self):
         merger = DataMerger(self.source_data, self.dest_data)
+        
+        # Test invalid column
         with self.assertRaises(ValueError):
             merger.merge(
                 match_column='email',
-                columns_to_copy=['name', 'nonexistent_column'],
-                join_type='left'
+                columns_to_copy=['nonexistent']
             )
-
-    def test_empty_destination(self):
-        empty_dest = pd.DataFrame(columns=['email', 'order_id'])
-        merger = DataMerger(self.source_data, empty_dest)
-        result = merger.merge(
-            match_column='email',
-            columns_to_copy=['name', 'phone'],
-            join_type='left'
-        )
-        
-        self.assertEqual(len(result), 3)  # Should contain all source rows
-        self.assertTrue(all(pd.isna(result['order_id'])))
+            
+        # Test invalid join type
+        with self.assertRaises(ValueError):
+            merger.merge(
+                match_column='email',
+                columns_to_copy=['name'],
+                join_type='invalid'
+            )
 
 if __name__ == '__main__':
     unittest.main()

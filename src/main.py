@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import argparse
 import pandas as pd
 from typing import List, Literal, Optional

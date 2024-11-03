@@ -1,0 +1,20 @@
+[openai]
+api_key = "gsk_"
+model = "llama3-70b-8192"
+url = "https://api.groq.com/openai/v1"
+
+[groq]
+api_key = "your-groq-key-here"
+model = "mixtral-8x7b-32768"
+url = "https://api.groq.com/v1"
+
+[anthropic]
+
+api_key = "your-anthropic-key-here"
+model = "claude-3-sonnet"
+url = "https://api.anthropic.com/v1"
+
+[default]
+provider = "openai"  # Which AI provider to use by default
+join_type = "left"
+ignore_case = false

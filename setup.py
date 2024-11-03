@@ -20,15 +20,18 @@ setup(
     include_package_data=True,
     install_requires=[
         "pandas>=2.0.0",
-        "openpyxl>=3.0.0"
+        "openpyxl>=3.0.0",
+        "openai>=1.0.0",
+        "tomli>=2.0.1",
+        "python-dotenv>=1.0.0"
     ],
     entry_points={
         'console_scripts': [
             'msv=src.main:main',
         ],
     },
-    author="StackBlitz",
-    author_email="support@stackblitz.com",
+    author="Vishal Gandhi",
+    author_email="igandhivishal@gmail.com",
     description="A powerful CLI tool for merging and transforming CSV/XLSX files",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",

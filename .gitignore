@@ -1,3 +1,6 @@
 node_modules
 .venv
 .env
+
+# Ignore config.toml
+config.toml

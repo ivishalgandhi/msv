@@ -1,5 +1,10 @@
-from setuptools import setup, find_packages
 import os
+from setuptools import setup, find_packages
+
+# Read version from version.py
+version = {}
+with open(os.path.join("src", "version.py")) as f:
+    exec(f.read(), version)
 
 def package_files(directory):
     paths = []
@@ -12,10 +17,10 @@ sample_files = package_files('samples')
 
 setup(
     name="msv",
-    version="1.0.0",
-    packages=find_packages(),
+    version=version['__version__'],
+    packages=['src'],  # Explicitly declare the package
     package_data={
-        'msv': sample_files,
+        'src': sample_files,
     },
     include_package_data=True,
     install_requires=[

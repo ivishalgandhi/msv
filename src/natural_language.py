@@ -1,7 +1,13 @@
 # src/natural_language.py
 from dataclasses import dataclass
 from typing import List, Optional, Dict
-from openai import OpenAI
+try:
+    from openai import OpenAI
+except ImportError:
+    raise ImportError(
+        "The openai package is required for natural language features. "
+        "Install it with: pip install openai>=1.0.0"
+    )
 import json
 from dotenv import load_dotenv
 import os

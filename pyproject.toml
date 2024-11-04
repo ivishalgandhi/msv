@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "msv"
-version = "1.0.0"
+version = "1.0.3"
 description = "A powerful CLI tool for merging and transforming CSV/XLSX files"
 readme = "README.md"
 authors = [{ name = "Vishal Gandhi", email = "igandhivishal@gmail.com" }]
@@ -23,6 +23,9 @@ keywords = ["csv", "xlsx", "data", "merge", "transform", "cli"]
 dependencies = [
     "pandas>=2.0.0",
     "openpyxl>=3.0.0",
+    "openai>=1.0.0",  # Make sure this is required
+    "python-dotenv>=1.0.0",
+    "tomli>=2.0.1"
 ]
 requires-python = ">=3.7"
 [project.urls]

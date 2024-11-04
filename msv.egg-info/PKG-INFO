@@ -1,12 +1,12 @@
 Metadata-Version: 2.1
 Name: msv
-Version: 1.0.0
+Version: 1.0.3
 Summary: A powerful CLI tool for merging and transforming CSV/XLSX files
 Home-page: https://github.com/stackblitz/msv
 Author: Vishal Gandhi
-Author-email: StackBlitz <support@stackblitz.com>
+Author-email: Vishal Gandhi <igandhivishal@gmail.com>
 License: MIT
-Project-URL: Homepage, https://github.com/stackblitz/msv
+Project-URL: Homepage, https://github.com/ivishalgandhi/msv
 Keywords: csv,xlsx,data,merge,transform,cli
 Classifier: Development Status :: 5 - Production/Stable
 Classifier: Intended Audience :: Developers
@@ -21,13 +21,15 @@ Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: pandas>=2.0.0
 Requires-Dist: openpyxl>=3.0.0
+Requires-Dist: openai>=1.0.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: tomli>=2.0.1
 
 # MSV - Merge Source Values
 
 A powerful CLI tool for merging and transforming CSV/XLSX files with natural language support.
 
 ## Features
-
 - Merge data from CSV and Excel files
 - Case-sensitive or case-insensitive matching
 - Multiple join types (left, right, outer, inner)
@@ -36,7 +38,6 @@ A powerful CLI tool for merging and transforming CSV/XLSX files with natural lan
 - Column mapping with custom names
 
 ## Installation
-
 ```bash
 pip install msv
 ```

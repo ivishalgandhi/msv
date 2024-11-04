@@ -1,6 +1,5 @@
-email,order_id,amount,date,name
-john@example.com,ORD-001,100.0,2024-01-15,John Doe
-jane@example.com,ORD-002,200.0,2024-01-16,Jane Smith
-bob@example.com,ORD-003,150.0,2024-01-17,Bob Wilson
-alice@example.com,ORD-004,300.0,2024-01-18,Alice Brown
-mary@example.com,,,,Mary Johnson
+email,order_id,amount,date
+john@example.com,ORD-001,100.0,2024-01-15
+jane@example.com,ORD-002,200.0,2024-01-16
+bob@example.com,ORD-003,150.0,2024-01-17
+alice@example.com,ORD-004,300.0,2024-01-18

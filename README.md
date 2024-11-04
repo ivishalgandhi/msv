@@ -86,10 +86,12 @@ cp config.toml.example config.toml
 
 ### Requirements
 
-- Python 3.7+
-- pandas
+- numpy
+- OpenAI
 - openpyxl
- 
+- pandas
+- tomli
+
 ### Running Tests
 ```bash
 python -m unittest discover tests

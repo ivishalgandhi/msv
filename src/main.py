@@ -13,6 +13,11 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description='MSV - Merge and transform CSV/XLSX files'
     )
+    # Add web interface option
+    parser.add_argument('--web', action='store_true',
+                       help='Start web interface')
+    parser.add_argument('--port', type=int, default=5000,
+                       help='Port for web interface')
     parser.add_argument('--natural', '-n', action='store_true',
                        help='Use natural language interface')
     parser.add_argument('--source', '-s', 
@@ -41,8 +46,8 @@ def parse_arguments() -> argparse.Namespace:
     
     args = parser.parse_args()
     
-    # Only enforce required arguments if not using natural language
-    if not args.natural:
+    # Only enforce required arguments if not using web or natural language interface
+    if not (args.web or args.natural):
         if not all([args.source, args.destination, args.match_column, args.columns]):
             parser.error("the following arguments are required: --source/-s, "
                         "--destination/-d, --match-column/-m, --columns/-c")
@@ -52,6 +57,11 @@ def parse_arguments() -> argparse.Namespace:
 def main():
     args = parse_arguments()
     
+    if args.web:
+        from .web_interface import start_web_interface
+        start_web_interface(port=args.port)
+        return 0
+
     try:
         if args.natural:
             print("Enter your request in natural language:")

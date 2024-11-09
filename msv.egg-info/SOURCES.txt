@@ -15,6 +15,7 @@ src/main.py
 src/natural_language.py
 src/test_samples.py
 src/version.py
+src/web_interface.py
 src/../samples/customers.csv
 src/../samples/orders.csv
 tests/test_data_merger.py

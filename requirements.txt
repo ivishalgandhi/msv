@@ -3,3 +3,6 @@ openpyxl>=3.0.0
 openai>=1.0.0
 tomli>=2.0.1
 python-dotenv>=1.0.0
+flask>=2.0.0
+waitress>=2.1.2
+paste>=3.5.0

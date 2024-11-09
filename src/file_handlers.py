@@ -60,3 +60,14 @@ def write_file(df: pd.DataFrame, output_path: str, sheet_name: Optional[str] = N
         print(f"Successfully wrote output to {output_path}" + (f" (sheet: {sheet_name})" if sheet_name else ""))
     except Exception as e:
         raise Exception(f"Error writing output: {str(e)}")
+
+def read_file(file_path, sheet_name=None):
+    """Read CSV or Excel file into a pandas DataFrame."""
+    if file_path.endswith('.csv'):
+        df = pd.read_csv(file_path)
+    elif file_path.endswith('.xlsx'):
+        # Default to the first sheet if sheet_name is None
+        df = pd.read_excel(file_path, sheet_name=sheet_name)
+    else:
+        raise ValueError('Unsupported file format: ' + file_path)
+    return df

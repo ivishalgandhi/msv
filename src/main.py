@@ -90,8 +90,7 @@ def main():
         
         # Read destination file
         print(f"📖 Reading destination file: {args.destination}")
-        dest_df = read_file(args.destination, create_if_missing=True, 
-                          sheet_name=args.dest_sheet)
+        dest_df = read_file(args.destination, sheet_name=args.dest_sheet)  # Remove create_if_missing
         
         # Get columns to copy
         columns_to_copy = [col.strip() for col in args.columns.split(',')]

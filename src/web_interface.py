@@ -85,7 +85,6 @@ def preview_file():
 
 @app.route('/merge', methods=['POST'])
 def merge_files():
-    """Perform file merge operation by updating destination file"""
     source = request.files['source']
     dest = request.files['destination']
     
@@ -103,51 +102,42 @@ def merge_files():
         source.save(source_path)
         dest.save(dest_path)
         
-        # Read files with sheet handling
-        source_sheet = request.form.get('source_sheet')
-        dest_sheet = request.form.get('dest_sheet')
+        # Read files
+        source_df = read_file(source_path, sheet_name=request.form.get('source_sheet'))
+        dest_df = read_file(dest_path, sheet_name=request.form.get('dest_sheet'))
         
-        source_df = read_file(source_path, sheet_name=source_sheet)
-        dest_df = read_file(dest_path, sheet_name=dest_sheet)
-        
-        # Initialize merger and process files
+        # Initialize merger and merge
         merger = DataMerger(source_df, dest_df)
+        result = merger.merge(
+            match_column=match_column,
+            columns_to_copy=columns,
+            ignore_case=ignore_case,
+            join_type=join_type
+        )
         
-        # Validate columns before merge
-        missing_cols = [col for col in columns if col not in source_df.columns]
-        if missing_cols:
-            return jsonify({
-                'error': f"Columns not found in source file: {', '.join(missing_cols)}"
-            })
-            
-        try:
-            # Perform merge
-            result = merger.merge(
-                match_column=match_column,
-                columns_to_copy=columns,
-                ignore_case=ignore_case,
-                join_type=join_type
-            )
-            
-            # Write back to destination file
-            write_file(result, dest_path, sheet_name=dest_sheet)
-            
-            # Return success with stats
-            return jsonify({
-                'success': True,
-                'stats': {
-                    'rows_before': len(dest_df),
-                    'rows_after': len(result),
-                    'rows_changed': len(result) - len(dest_df),
-                    'new_columns': list(set(columns) - set(dest_df.columns)),
-                    'matched_rows': len(result[result[columns[0]].notna()]) if columns else 0
-                }
-            })
-            
-        except Exception as e:
-            return jsonify({'error': str(e)})
-            
+        # Write result back to destination
+        write_file(result, dest_path, sheet_name=request.form.get('dest_sheet'))
+
+
+
+        
+        # Return success response with stats
+        return jsonify({
+            'success': True,
+            'stats': {
+                'rows_before': len(dest_df),
+                'rows_after': len(result),
+                'rows_changed': len(result) - len(dest_df),
+                'new_columns': list(set(columns) - set(dest_df.columns)),
+                'dest_path': dest_path,
+                'dest_sheet': request.form.get('dest_sheet'),
+                'matched_rows': len(result[result[columns[0]].notna()]) if columns else 0
+
+            }
+        })
+
     except Exception as e:
+        logger.error(f"Error during merge: {str(e)}")
         return jsonify({'error': str(e)})
     finally:
         # Cleanup temp files

@@ -85,7 +85,7 @@ def preview_file():
 
 @app.route('/merge', methods=['POST'])
 def merge_files():
-    """Perform file merge operation with preview"""
+    """Perform file merge operation by updating destination file"""
     source = request.files['source']
     dest = request.files['destination']
     
@@ -103,9 +103,12 @@ def merge_files():
         source.save(source_path)
         dest.save(dest_path)
         
-        # Read files
-        source_df = read_file(source_path)
-        dest_df = read_file(dest_path)
+        # Read files with sheet handling
+        source_sheet = request.form.get('source_sheet')
+        dest_sheet = request.form.get('dest_sheet')
+        
+        source_df = read_file(source_path, sheet_name=source_sheet)
+        dest_df = read_file(dest_path, sheet_name=dest_sheet)
         
         # Initialize merger and process files
         merger = DataMerger(source_df, dest_df)
@@ -118,6 +121,7 @@ def merge_files():
             })
             
         try:
+            # Perform merge
             result = merger.merge(
                 match_column=match_column,
                 columns_to_copy=columns,
@@ -125,22 +129,12 @@ def merge_files():
                 join_type=join_type
             )
             
-            # Generate preview HTML
-            preview_html = generate_preview_html(result)
+            # Write back to destination file
+            write_file(result, dest_path, sheet_name=dest_sheet)
             
-            # Save result based on format
-            output_format = request.form.get('output_format', 'csv')
-            if output_format == 'xlsx':
-                output_path = os.path.join(temp_dir, 'result.xlsx')
-                write_file(result, output_path, sheet_name='Merged Data')
-            else:
-                output_path = os.path.join(temp_dir, 'result.csv')
-                write_file(result, output_path)
-                
-            # Return both preview and download URL
+            # Return success with stats
             return jsonify({
-                'preview': preview_html,
-                'download_url': url_for('download_result', path=output_path),
+                'success': True,
                 'stats': {
                     'rows_before': len(dest_df),
                     'rows_after': len(result),
@@ -149,14 +143,23 @@ def merge_files():
                     'matched_rows': len(result[result[columns[0]].notna()]) if columns else 0
                 }
             })
+            
         except Exception as e:
             return jsonify({'error': str(e)})
             
+    except Exception as e:
+        return jsonify({'error': str(e)})
     finally:
         # Cleanup temp files
         for f in os.listdir(temp_dir):
-            os.remove(os.path.join(temp_dir, f))
-        os.rmdir(temp_dir)
+            try:
+                os.remove(os.path.join(temp_dir, f))
+            except:
+                pass
+        try:
+            os.rmdir(temp_dir)
+        except:
+            pass
 
 @app.route('/getsheets', methods=['POST'])
 def get_sheets():

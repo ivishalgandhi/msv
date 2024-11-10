@@ -39,12 +39,15 @@
     </div>
 
     <!-- Focus View Modal -->
-    <div class="modal fade" id="focusViewModal" tabindex="-1">
+    <div class="modal fade" id="focusViewModal" tabindex="-1" aria-labelledby="focusViewModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-fullscreen">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header border-bottom">
                     <div class="d-flex align-items-center gap-3">
-                        <h5 class="modal-title" id="focusViewModalLabel"></h5>
+                        <div>
+                            <h5 class="modal-title mb-0" id="focusViewModalLabel"></h5>
+                            <small class="text-muted" id="focusViewFilename"></small>
+                        </div>
                         <!-- Sheet selector for Excel files -->
                         <div id="focusViewSheetSelect" class="d-none">
                             <select class="form-select form-select-sm" id="focusViewSheet">
@@ -52,10 +55,14 @@
                             </select>
                         </div>
                     </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-0">
                     <div id="focusViewContent" class="preview-container-full"></div>
+                </div>
+                <div class="modal-footer border-top">
+                    <span class="me-auto text-muted small" id="focusViewStats"></span>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -157,19 +164,6 @@
                                         Ignore Case When Matching
                                     </label>
                                 </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-check">
-                                    <input type="checkbox" id="showMatchingFirst" class="form-check-input">
-                                    <label class="form-check-label">Show Matching Columns First</label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Output Format</label>
-                                <select id="outputFormat" class="form-select">
-                                    <option value="csv">CSV</option>
-                                    <option value="xlsx">Excel (XLSX)</option>
-                                </select>
                             </div>
                             <div class="col-12">
                                 <h6 class="mb-3">Select Columns to Copy</h6>

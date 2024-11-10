@@ -337,11 +337,6 @@ th.matching-column .bi-link {
     overflow: auto;
 }
 
-/* Column ordering */
-.matching-column-first {
-    order: -1;
-}
-
 /* Dark mode styles */
 [data-bs-theme="dark"] {
     --bs-body-bg: #121212;

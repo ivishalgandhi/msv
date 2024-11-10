@@ -265,12 +265,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 )
             );
 
+            // Create options with original column names
             matchColumn.innerHTML = `
                 <option value="">Select Match Column</option>
-                ${commonColumns.map(col => `<option value="${col}">${col}</option>`).join('')}
+                ${commonColumns.map(col => {
+                    // Find the matching destination column
+                    const destCol = destColumns.find(dc => 
+                        dc.toLowerCase() === col.toLowerCase()
+                    );
+                    return `<option value="${col}">
+                        ${col}${destCol !== col ? ` (matches ${destCol})` : ''}
+                    </option>`;
+                }).join('')}
             `;
 
-            // Update column selection checkboxes
             updateColumnSelection();
         }
     }
@@ -309,14 +317,36 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Show loading state
+        document.getElementById('result').innerHTML = `
+            <div class="alert alert-info">
+                <div class="d-flex align-items-center">
+                    <div class="spinner-border spinner-border-sm me-2"></div>
+                    Processing merge...
+                </div>
+            </div>`;
+
         const formData = new FormData();
         formData.append('source', sourceFile.files[0]);
         formData.append('destination', destFile.files[0]);
-        formData.append('match_column', matchColumn.value);
-        selectedColumns.forEach(col => formData.append('columns[]', col));
-        formData.append('join_type', joinType.value);
-        formData.append('ignore_case', ignoreCase.checked);
+
+        // Find exact match first, then case-insensitive match
+        const destCol = destColumns.find(dc => dc === matchColumn.value) || 
+                       destColumns.find(dc => dc.toLowerCase() === matchColumn.value.toLowerCase());
         
+        // Use exact column name from destination
+        formData.append('match_column', destCol || matchColumn.value);
+
+        // Find and use exact column names from destination
+        selectedColumns.forEach(col => {
+            const matchingDestCol = destColumns.find(dc => dc === col) || 
+                                  destColumns.find(dc => dc.toLowerCase() === col.toLowerCase());
+            formData.append('columns[]', matchingDestCol || col);
+        });
+
+        formData.append('join_type', joinType.value);
+        formData.append('ignore_case', 'true');  // Enable case-insensitive matching
+
         // Add sheet information if Excel files
         if (sourceFile.files[0].name.endsWith('.xlsx') && sourceSheet.value) {
             formData.append('source_sheet', sourceSheet.value);
@@ -331,38 +361,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: formData
             });
 
-            if (response.ok) {
-                const stats = JSON.parse(response.headers.get('X-Merge-Stats'));
-                
-                // Create download link
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'merged_result.csv';
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                
-                // Show merge statistics
+            const data = await response.json();
+            
+            if (data.success) {
                 document.getElementById('result').innerHTML = `
                     <div class="alert alert-success">
-                        <h6 class="mb-2">Merge completed successfully!</h6>
+                        <h6 class="mb-2">✨ Merge completed successfully!</h6>
                         <div class="small">
-                            <div>Rows: ${stats.rows_before} → ${stats.rows_after} (${stats.rows_changed >= 0 ? '+' : ''}${stats.rows_changed})</div>
-                            ${stats.new_columns.length ? `<div>New columns: ${stats.new_columns.join(', ')}</div>` : ''}
-                            <div>Matched rows: ${stats.matched_rows}</div>
+                            <div>Rows: ${data.stats.rows_before} → ${data.stats.rows_after} 
+                                (${data.stats.rows_changed >= 0 ? '+' : ''}${data.stats.rows_changed})</div>
+                            ${data.stats.new_columns.length ? 
+                                `<div>New columns: ${data.stats.new_columns.join(', ')}</div>` : ''}
+                            <div>Matched rows: ${data.stats.matched_rows}</div>
                         </div>
                     </div>`;
             } else {
-                const error = await response.json();
-                document.getElementById('result').innerHTML = 
-                    `<div class="alert alert-danger">Error: ${error.error}</div>`;
+                document.getElementById('result').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Error: ${data.error}
+                    </div>`;
             }
         } catch (error) {
-            document.getElementById('result').innerHTML = 
-                `<div class="alert alert-danger">Error performing merge: ${error.message}</div>`;
+            console.error('Merge error:', error);
+            document.getElementById('result').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Error performing merge: ${error.message}
+                </div>`;
         }
     });
 
@@ -650,7 +676,7 @@ function escapeHtml(unsafe) {
     }
     return String(unsafe)
         .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
+        .replace(/<//g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");

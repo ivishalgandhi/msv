@@ -34,32 +34,29 @@ def read_file(file_path: Union[str, Path], create_if_missing: bool = False, shee
         raise Exception(f"Error reading {file_path}: {str(e)}")
 
 def write_file(df: pd.DataFrame, output_path: str, sheet_name: Optional[str] = None):
-    """Write DataFrame to CSV or XLSX.
-    
-    Args:
-        df: DataFrame to write
-        output_path: Path to write to
-        sheet_name: Sheet name for Excel files (ignored for CSV)
-    """
+    """Write DataFrame to CSV or XLSX with improved error handling"""
     try:
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
         
         if output_path.endswith('.csv'):
             df.to_csv(output_path, index=False)
+            print(f"✓ Written to CSV: {output_path}")
+            
         elif output_path.endswith('.xlsx'):
-            # If file exists, try to update specific sheet
-            if os.path.exists(output_path) and sheet_name:
-                try:
-                    with pd.ExcelWriter(output_path, mode='a', if_sheet_exists='replace') as writer:
-                        df.to_excel(writer, sheet_name=sheet_name or 'Sheet1', index=False)
-                except:  # If append fails, write new file
-                    df.to_excel(output_path, sheet_name=sheet_name or 'Sheet1', index=False)
-            else:
+            mode = 'a' if os.path.exists(output_path) else 'w'
+            try:
+                with pd.ExcelWriter(output_path, mode=mode, if_sheet_exists='replace') as writer:
+                    df.to_excel(writer, sheet_name=sheet_name or 'Sheet1', index=False)
+                print(f"✓ Written to Excel: {output_path} (sheet: {sheet_name or 'Sheet1'})")
+            except Exception as excel_error:
+                print(f"⚠️ Excel write failed, trying new file: {str(excel_error)}")
                 df.to_excel(output_path, sheet_name=sheet_name or 'Sheet1', index=False)
-        print(f"Successfully wrote output to {output_path}" + (f" (sheet: {sheet_name})" if sheet_name else ""))
+        else:
+            raise ValueError(f"Unsupported file format for {output_path}")
+            
     except Exception as e:
-        raise Exception(f"Error writing output: {str(e)}")
+        raise Exception(f"Error writing to {output_path}: {str(e)}")
 
 def read_file(file_path: Union[str, Path], sheet_name: Optional[str] = None) -> pd.DataFrame:
     """Read CSV or XLSX file into a pandas DataFrame."""

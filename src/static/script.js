@@ -45,25 +45,29 @@ document.addEventListener('DOMContentLoaded', function() {
     destFile.addEventListener('change', async function(e) {
         const file = e.target.files[0];
         if (file) {
+            // Store the full path in the hidden input field
+            document.getElementById('destFullPath').value = file.webkitRelativePath || file.name;
+            
             // Reset sheet selection
             destSheetSelect.classList.add('d-none');
             destSheet.innerHTML = '';
 
             if (file.name.endsWith('.xlsx')) {
                 // Get available sheets for Excel files
-                const sheets = await getSheets(file, 'destination');
-                if (sheets && sheets.length) {
+                const sheets = await getSheets(file);
+                if (sheets.length > 0) {
                     destSheetSelect.classList.remove('d-none');
-                    destSheet.innerHTML = `
-                        ${sheets.map(sheet => `<option value="${sheet}">${sheet}</option>`).join('')}
-                    `;
-                    // Select the first sheet by default
-                    destSheet.value = sheets[0];
+                    sheets.forEach(sheet => {
+                        const option = document.createElement('option');
+                        option.value = sheet;
+                        option.textContent = sheet;
+                        destSheet.appendChild(option);
+                    });
                 }
             }
 
-            // Preview file with the selected sheet (first sheet by default)
-            await previewFile(file, 'destPreview', false, destSheet.value);
+            // Preview the file
+            previewFile(file, 'destPreview', false);
         }
     });
 
@@ -121,12 +125,10 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="d-flex justify-content-center align-items-center p-4">
                 <div class="spinner-border text-primary"></div>
             </div>`;
-
         if (!file) {
             preview.innerHTML = '<div class="alert alert-info m-3">No file selected</div>';
             return;
         }
-
         const formData = new FormData();
         formData.append('file', file);
         formData.append('type', isSource ? 'source' : 'destination');
@@ -135,38 +137,31 @@ document.addEventListener('DOMContentLoaded', function() {
         if (sheetName) {
             formData.append('sheet', sheetName);
         }
-
         try {
             const response = await fetch('/preview', {
                 method: 'POST',
                 body: formData
             });
-
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-
             const data = await response.json();
-
             if (data.error) {
                 preview.innerHTML = `<div class="alert alert-danger m-3">${escapeHtml(data.error)}</div>`;
                 return;
             }
-
             // Store columns
             if (isSource) {
                 sourceColumns = data.columns;
             } else {
                 destColumns = data.columns;
             }
-
             // Find matching columns
             const matchingColumns = data.columns.filter(col => 
                 isSource ? 
                     destColumns.some(destCol => destCol.toLowerCase() === col.toLowerCase()) :
                     sourceColumns.some(sourceCol => sourceCol.toLowerCase() === col.toLowerCase())
             );
-
             // Show preview with highlighted matching columns
             preview.innerHTML = `
                 <div class="preview-info">
@@ -210,10 +205,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     </table>
                 </div>
             `;
-
             // Update match column options
             updateMatchColumns();
-
         } catch (error) {
             console.error('Preview error:', error);
             preview.innerHTML = `
@@ -329,6 +322,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData();
         formData.append('source', sourceFile.files[0]);
         formData.append('destination', destFile.files[0]);
+        formData.append('dest_full_path', document.getElementById('destFullPath').value);
 
         // Find exact match first, then case-insensitive match
         const destCol = destColumns.find(dc => dc === matchColumn.value) || 
@@ -345,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         formData.append('join_type', joinType.value);
-        formData.append('ignore_case', 'true');  // Enable case-insensitive matching
+        formData.append('ignore_case', ignoreCase.checked);
 
         // Add sheet information if Excel files
         if (sourceFile.files[0].name.endsWith('.xlsx') && sourceSheet.value) {
@@ -364,6 +358,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             
             if (data.success) {
+                // Create a download link for the merged file
+                const downloadLink = document.createElement('a');
+                downloadLink.href = data.download_url;
+                downloadLink.textContent = 'Download Merged File';
+                downloadLink.className = 'btn btn-success mt-2';
+
                 document.getElementById('result').innerHTML = `
                     <div class="alert alert-success">
                         <h6 class="mb-2">✨ Merge completed successfully!</h6>
@@ -375,6 +375,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div>Matched rows: ${data.stats.matched_rows}</div>
                         </div>
                     </div>`;
+
+                document.getElementById('result').appendChild(downloadLink);
             } else {
                 document.getElementById('result').innerHTML = `
                     <div class="alert alert-danger">
@@ -676,7 +678,7 @@ function escapeHtml(unsafe) {
     }
     return String(unsafe)
         .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
+        .replace(/<//g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
@@ -695,5 +697,21 @@ destSheet.addEventListener('change', function() {
     const file = destFile.files[0];
     if (file) {
         previewFile(file, 'destPreview', false, this.value);
+    }
+});
+
+// Handle source sheet change
+sourceSheet.addEventListener('change', function() {
+    const file = sourceFile.files[0];
+    if (file) {
+        previewFile(file, 'sourcePreview', true, sourceSheet.value);
+    }
+});
+
+// Handle destination sheet change
+destSheet.addEventListener('change', function() {
+    const file = destFile.files[0];
+    if (file) {
+        previewFile(file, 'destPreview', false, destSheet.value);
     }
 });

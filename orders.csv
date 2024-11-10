@@ -1,0 +1,5 @@
+email,order_id,amount,date,address
+john@example.com,ORD-001,100.0,2024-01-15,123 Main St
+jane@example.com,ORD-002,200.0,2024-01-16,456 Oak Rd
+bob@example.com,ORD-003,150.0,2024-01-17,789 Pine Ave
+alice@example.com,ORD-004,300.0,2024-01-18,321 Elm St

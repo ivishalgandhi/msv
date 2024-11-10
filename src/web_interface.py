@@ -9,6 +9,9 @@ from waitress import serve
 from paste.translogger import TransLogger
 import logging
 import socket
+# Import ColumnMapping
+from file_processor import FileProcessor, ColumnMapping
+import uuid
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -51,8 +54,6 @@ def preview_file():
                 
             # Read specified sheet
             df = pd.read_excel(temp_path, sheet_name=sheet_name)
-            
-            # Include Excel-specific information
             excel_info = {
                 'is_excel': True,
                 'current_sheet': sheet_name,
@@ -85,71 +86,83 @@ def preview_file():
 
 @app.route('/merge', methods=['POST'])
 def merge_files():
-    source = request.files['source']
-    dest = request.files['destination']
-    
-    # Get merge parameters
-    match_column = request.form['match_column']
-    columns = request.form.getlist('columns[]')
-    join_type = request.form.get('join_type', 'left')
-    ignore_case = request.form.get('ignore_case', 'false') == 'true'
-    
-    temp_dir = tempfile.mkdtemp()
+    """Perform file merge operation"""
     try:
-        # Save uploaded files
-        source_path = os.path.join(temp_dir, source.filename)
-        dest_path = os.path.join(temp_dir, dest.filename)
-        source.save(source_path)
-        dest.save(dest_path)
-        
-        # Read files
-        source_df = read_file(source_path, sheet_name=request.form.get('source_sheet'))
-        dest_df = read_file(dest_path, sheet_name=request.form.get('dest_sheet'))
-        
-        # Initialize merger and merge
+        logger.info("Starting merge operation")
+        source = request.files['source']
+        dest = request.files['destination']
+
+        # Log input parameters
+        logger.info(f"Source file: {source.filename}")
+        logger.info(f"Destination file: {dest.filename}")
+        logger.info(f"Match column: {request.form['match_column']}")
+        logger.info(f"Columns to copy: {request.form.getlist('columns[]')}")
+
+        # Get merge parameters
+        match_column = request.form['match_column']
+        columns = request.form.getlist('columns[]')
+        join_type = request.form.get('join_type', 'left')
+        ignore_case = request.form.get('ignore_case') == 'true'
+
+        # Read files with sheet handling
+        source_sheet = request.form.get('source_sheet') or 0
+        dest_sheet = request.form.get('dest_sheet') or 0
+
+        logger.info(f"Reading source file with sheet: {source_sheet}")
+        if source.filename.endswith('.xlsx'):
+            source_df = pd.read_excel(source, sheet_name=source_sheet)
+        else:
+            source_df = pd.read_csv(source)
+
+        logger.info(f"Reading destination file with sheet: {dest_sheet}")
+        if dest.filename.endswith('.xlsx'):
+            dest_df = pd.read_excel(dest, sheet_name=dest_sheet)
+        else:
+            dest_df = pd.read_csv(dest)
+
+        # Initialize merger and process files
         merger = DataMerger(source_df, dest_df)
-        result = merger.merge(
+        result_df = merger.merge(
             match_column=match_column,
             columns_to_copy=columns,
             ignore_case=ignore_case,
             join_type=join_type
         )
-        
-        # Write result back to destination
-        write_file(result, dest_path, sheet_name=request.form.get('dest_sheet'))
 
+        # Save the merged file to the default temporary directory
+        temp_dir = tempfile.gettempdir()
+        # Generate a unique filename
+        unique_filename = f"{uuid.uuid4()}_{dest.filename}"
+        temp_file_path = os.path.join(temp_dir, unique_filename)
+        logger.info(f"Writing merged file to: {temp_file_path}")
 
+        if dest.filename.endswith('.xlsx'):
+            result_df.to_excel(temp_file_path, index=False)
+        else:
+            result_df.to_csv(temp_file_path, index=False)
 
-        
-        # Return success response with stats
+        logger.info("Write operation successful")
+
+        # Return success response with stats and download link
+        stats = {
+            'rows_before': len(dest_df),
+            'rows_after': len(result_df),
+            'rows_changed': len(result_df) - len(dest_df),
+            'new_columns': list(set(columns) - set(dest_df.columns)),
+            'matched_rows': len(result_df[result_df[match_column].notna()]) if match_column in result_df else 0
+        }
+        logger.info(f"Operation stats: {stats}")
+
+        # Return the unique filename in the download URL
         return jsonify({
             'success': True,
-            'stats': {
-                'rows_before': len(dest_df),
-                'rows_after': len(result),
-                'rows_changed': len(result) - len(dest_df),
-                'new_columns': list(set(columns) - set(dest_df.columns)),
-                'dest_path': dest_path,
-                'dest_sheet': request.form.get('dest_sheet'),
-                'matched_rows': len(result[result[columns[0]].notna()]) if columns else 0
-
-            }
+            'stats': stats,
+            'download_url': f"/download/{unique_filename}"
         })
 
     except Exception as e:
         logger.error(f"Error during merge: {str(e)}")
         return jsonify({'error': str(e)})
-    finally:
-        # Cleanup temp files
-        for f in os.listdir(temp_dir):
-            try:
-                os.remove(os.path.join(temp_dir, f))
-            except:
-                pass
-        try:
-            os.rmdir(temp_dir)
-        except:
-            pass
 
 @app.route('/getsheets', methods=['POST'])
 def get_sheets():
@@ -173,6 +186,15 @@ def get_sheets():
     finally:
         os.remove(temp_path)
         os.rmdir(temp_dir)
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    temp_dir = tempfile.gettempdir()
+    file_path = os.path.join(temp_dir, filename)
+    if os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True)
+    else:
+        return "File not found", 404
 
 def find_free_port(start_port=5000, max_port=5100):
     """Find first available port in range"""

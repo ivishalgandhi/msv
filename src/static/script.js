@@ -525,94 +525,94 @@ document.addEventListener('DOMContentLoaded', function() {
 document.querySelectorAll('.focus-view-btn').forEach(btn => {
     btn.addEventListener('click', async function(e) {
         e.preventDefault();
-        const targetId = this.getAttribute('data-preview-target');
         
-        // Get file input and sheet selector
+        // Get target preview ID and file input
+        const targetId = this.getAttribute('data-preview-target');
         const fileInput = document.getElementById(
             targetId === 'sourcePreview' ? 'sourceFile' : 'destFile'
         );
         const sheetSelect = document.getElementById(
             targetId === 'sourcePreview' ? 'sourceSheet' : 'destSheet'
         );
-        
+
         if (!fileInput.files[0]) {
             console.error('No file selected');
             return;
         }
-        
-        // Show loading state in modal
+
+        // Get modal elements
         const modal = document.getElementById('focusViewModal');
         const modalContent = modal.querySelector('#focusViewContent');
-        const focusViewSheet = document.getElementById('focusViewSheet');
-        const focusViewSheetSelect = document.getElementById('focusViewSheetSelect');
         
+        // Set filename and title
+        document.getElementById('focusViewFilename').textContent = fileInput.files[0].name;
+        modal.querySelector('.modal-title').textContent = 
+            `${targetId === 'sourcePreview' ? 'Source' : 'Destination'} File Preview`;
+
+        // Show loading state
         modalContent.innerHTML = `
             <div class="d-flex justify-content-center align-items-center p-4">
                 <div class="spinner-border text-primary"></div>
             </div>`;
-            
-        // Show modal
+
+        // Show modal using Bootstrap
         const modalInstance = new bootstrap.Modal(modal);
         modalInstance.show();
-        
-        // Load full preview
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-        formData.append('type', targetId === 'sourcePreview' ? 'source' : 'destination');
-        formData.append('focus', 'true');
-        
-        // Add current sheet if Excel file
-        if (fileInput.files[0].name.endsWith('.xlsx') && sheetSelect.value) {
-            formData.append('sheet', sheetSelect.value);
-        }
-        
+
         try {
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('type', targetId === 'sourcePreview' ? 'source' : 'destination');
+            formData.append('focus', 'true');
+            
+            // Add sheet name if Excel file
+            if (fileInput.files[0].name.endsWith('.xlsx') && sheetSelect.value) {
+                formData.append('sheet', sheetSelect.value);
+            }
+
             const response = await fetch('/preview', {
                 method: 'POST',
                 body: formData
             });
-            
+
             const data = await response.json();
-            
+
             if (data.error) {
                 modalContent.innerHTML = `
                     <div class="alert alert-danger m-3">${escapeHtml(data.error)}</div>`;
                 return;
             }
-            
-            // Update sheet selector if Excel file
-            if (data.is_excel) {
-                focusViewSheetSelect.classList.remove('d-none');
-                focusViewSheet.innerHTML = data.available_sheets.map(sheet => `
-                    <option value="${sheet}" ${sheet === data.current_sheet ? 'selected' : ''}>
-                        ${sheet}
-                    </option>
-                `).join('');
-                
-                // Add sheet change handler
-                focusViewSheet.onchange = async () => {
-                    const formData = new FormData();
-                    formData.append('file', fileInput.files[0]);
-                    formData.append('type', targetId === 'sourcePreview' ? 'source' : 'destination');
-                    formData.append('focus', 'true');
-                    formData.append('sheet', focusViewSheet.value);
-                    
-                    // Update preview with new sheet
-                    await loadFocusView(formData, modalContent);
-                };
-            } else {
-                focusViewSheetSelect.classList.add('d-none');
-            }
-            
-            // Update title
-            modal.querySelector('.modal-title').textContent = 
-                `${targetId === 'sourcePreview' ? 'Source' : 'Destination'} File Preview` +
-                (data.is_excel ? ` - Sheet: ${data.current_sheet}` : '');
-            
-            // Show preview
-            await loadFocusView(formData, modalContent);
-            
+
+            // Show preview with available rows
+            modalContent.innerHTML = `
+                <div class="preview-info sticky-top">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Total Columns:</strong> ${data.columns.length}
+                            <strong class="ms-3">Total Rows:</strong> ${data.total_rows}
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive h-100">
+                    <table class="table table-sm table-hover preview-table mb-0">
+                        <thead>
+                            <tr>
+                                ${data.columns.map(col => `<th>${escapeHtml(col)}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.preview.map(row => `
+                                <tr>
+                                    ${data.columns.map(col => `
+                                        <td>${escapeHtml(row[col] || '')}</td>`).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+
         } catch (error) {
+            console.error('Focus view error:', error);
             modalContent.innerHTML = `
                 <div class="alert alert-danger m-3">
                     Error loading preview: ${error.message}
@@ -676,7 +676,7 @@ function escapeHtml(unsafe) {
     }
     return String(unsafe)
         .replace(/&/g, "&amp;")
-        .replace(/<//g, "&lt;")
+        .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
